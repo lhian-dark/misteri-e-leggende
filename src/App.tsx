@@ -106,6 +106,12 @@ function App() {
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+
+  const addLog = (msg: string) => {
+    console.log(`[DEBUG] ${msg}`);
+    setDebugLogs(prev => [...prev.slice(-10), `${new Date().toLocaleTimeString()}: ${msg}`]);
+  };
 
   // Initialize API Key
   useEffect(() => {
@@ -137,6 +143,7 @@ function App() {
       }
 
       console.error("Caught Global Error:", message, stack);
+      addLog(`Global Error: ${message}`);
       
       // Ignore non-critical quota errors
       if (message.includes('Quota exceeded') || message.includes('429')) return;
@@ -263,11 +270,13 @@ function App() {
   };
 
   const getPosition = () => {
+    addLog("Avvio geolocalizzazione...");
     setLoading(true);
     setError(null);
     setSearchCity(""); 
     
     if (!navigator.geolocation) {
+      addLog("Errore: GPS non supportato dal browser.");
       setError("La geolocalizzazione non è supportata dal tuo browser.");
       setLoading(false);
       return;
@@ -279,9 +288,10 @@ function App() {
       maximumAge: 0
     };
 
+    addLog("Richiesta posizione al sistema operativo...");
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        console.log("Posizione ottenuta:", position.coords.latitude, position.coords.longitude);
+        addLog(`Posizione trovata: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`);
         setLocation({
           lat: position.coords.latitude,
           lng: position.coords.longitude,
@@ -289,6 +299,7 @@ function App() {
         setLoading(false);
       },
       (err) => {
+        addLog(`Errore GPS: ${err.code} - ${err.message}`);
         let errorMsg = "Errore nella geolocalizzazione.";
         switch(err.code) {
           case 1:
@@ -335,20 +346,25 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
       const apiKey = activeApiKey;
       
       if (!apiKey) {
-        saveManualKey(); // Try to get it now
-        throw new Error("Chiave API non configurata. Usa il pulsante 'Configura Chiave API' o aggiungi VITE_GEMINI_API_KEY su Render.");
+        addLog("Errore: Chiave API non trovata durante la ricerca.");
+        saveManualKey(); 
+        throw new Error("Chiave API non configurata.");
       }
 
-      console.log("Inizializzazione Gemini...");
+      addLog(`ApiKey verificata (inizia con ${apiKey.substring(0,6)}...)`);
+
+      addLog("Inizializzazione Gemini...");
       const genAI = new (GoogleGenAI as any)(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
+      addLog("Invio richiesta a Gemini (con ricerca)...");
       const result = await model.generateContent({
         contents: [{ role: 'user', parts: [{ text: aiPrompt }] }],
         tools: [
           { googleSearch: {} } as any
         ]
       });
+      addLog("Risposta ricevuta da Gemini.");
 
       const response = result.response;
       const text = response.text() || "";
@@ -822,6 +838,13 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
         </footer>
           </>
         )}
+
+        {/* Debug Console */}
+        <div style={{ marginTop: '50px', padding: '15px', background: '#111', border: '1px solid #333', borderRadius: '10px', fontSize: '12px', color: '#888' }}>
+          <div style={{ fontWeight: 'bold', marginBottom: '5px', color: '#ff4e00' }}>Console di Diagnosi:</div>
+          {debugLogs.length === 0 ? "In attesa di azioni..." : debugLogs.map((log, i) => <div key={i}>{log}</div>)}
+          {error && <div style={{ color: 'red', marginTop: '5px' }}>ULTIMO ERRORE: {error}</div>}
+        </div>
       </main>
 
       <style>{`
