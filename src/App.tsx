@@ -548,7 +548,9 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
                 className="grid gap-8"
               >
                 {/* User Contributions First */}
-                {userContributions.map((place, idx) => (
+                {userContributions.map((place, idx) => {
+                  if (!place || !place.title) return null; // Safe fallback
+                  return (
                   <motion.div
                     key={`user-${idx}`}
                     initial={{ opacity: 0, y: 20 }}
@@ -562,19 +564,20 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
                     <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                       <div className="flex-1">
                         <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-[#ff4e00] transition-colors">
-                          {place.title}
+                          {place.title || "Mistero Senza Nome"}
                         </h3>
                         <p className="text-[#e0d8d0]/80 leading-relaxed mb-4">
-                          {place.description}
+                          {place.description || ""}
                         </p>
                         <div className="flex items-center gap-2 text-xs text-[#e0d8d0]/40">
                           <User className="w-3 h-3" />
-                          <span>Segnalato da {place.authorName}</span>
+                          <span>Segnalato da {place.authorName || "Utente Anonimo"}</span>
                         </div>
                       </div>
                     </div>
                   </motion.div>
-                ))}
+                )})}
+
 
                 {/* AI Results */}
                 {places.map((place, idx) => (
