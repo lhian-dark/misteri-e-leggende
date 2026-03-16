@@ -264,7 +264,7 @@ function App() {
         ? `nella città/paese di "${city}"` 
         : `entro ${searchRadius} km dalle coordinate: ${lat}, ${lng}`;
 
-      const prompt = `Agisci come un esperto mondiale di folklore, esoterismo, archeologia misteriosa e storia locale. Esegui una ricerca meticolosa, ossessiva e assolutamente esaustiva (utilizzando sia Google Search che Google Maps) per identificare OGNI possibile luogo legato al mistero, al paranormale, a leggende secolari o fatti storici inquietanti ${locationContext}. 
+      const aiPrompt = `Agisci come un esperto mondiale di folklore, esoterismo, archeologia misteriosa e storia locale. Esegui una ricerca meticolosa, ossessiva e assolutamente esaustiva (utilizzando sia Google Search che Google Maps) per identificare OGNI possibile luogo legato al mistero, al paranormale, a leggende secolari o fatti storici inquietanti ${locationContext}. 
 
 Voglio una lista lunga e dettagliata (punta a trovare almeno 15-20 luoghi). Non limitarti ai siti famosi. Cerca:
 1. Leggende urbane, case infestate, palazzi con presenze, chiese sconsacrate o templi antichi.
@@ -279,18 +279,30 @@ DESCRIZIONE: [Narrazione dettagliata, prolissa e coinvolgente del mistero, inclu
 
 Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
 
-      // Use literal string for Vite environment variable replacement
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      // Standard Vite environment variable access
+      let apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       
+      // Fallback for manual test if everything else fails
       if (!apiKey) {
-        throw new Error("Chiave API (VITE_GEMINI_API_KEY) non trovata. Controlla di averla aggiunta su Render in Settings -> Environment e di aver rifatto il Deploy con 'Clear Cache'.");
+        apiKey = window.localStorage.getItem('TEMP_GEMINI_KEY') || "";
       }
 
-      const genAI = new GoogleGenAI(apiKey) as any;
+      if (!apiKey || apiKey.length < 10) {
+        const manualKey = window.prompt("CHIAVE API NON TROVATA!\n\nNon riesco a trovare la chiave 'VITE_GEMINI_API_KEY' nelle impostazioni di Render.\n\nVuoi incollarla qui a mano solo per TESTARE se ora funziona? (Verrà salvata solo in questo browser)");
+        if (manualKey && manualKey.startsWith('AIza')) {
+          window.localStorage.setItem('TEMP_GEMINI_KEY', manualKey);
+          apiKey = manualKey;
+        } else {
+          throw new Error("Chiave API mancante or invalida. Assicurati che su Render la variabile si chiami VITE_GEMINI_API_KEY.");
+        }
+      }
+
+      console.log("Inizializzazione Gemini con chiave:", apiKey.substring(0, 6) + "...");
+      const genAI = new (GoogleGenAI as any)(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
       const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        contents: [{ role: 'user', parts: [{ text: aiPrompt }] }],
         tools: [
           { googleSearch: {} } as any
         ]
