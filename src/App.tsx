@@ -247,7 +247,16 @@ function App() {
       window.localStorage.setItem('MISTERI_GEMINI_KEY', key);
       setActiveApiKey(key);
       setError(null);
-      alert("Chiave configurata con successo! Ora puoi cercare i misteri.");
+      
+      // Automatic trigger: if we already have a location or city, try searching immediately
+      if (location || searchCity) {
+        setTimeout(() => {
+          if (location) findMysteryPlaces(location.lat, location.lng, radius);
+          else if (searchCity) findMysteryPlaces(null, null, radius, searchCity);
+        }, 100);
+      } else {
+        alert("Chiave configurata! Ora premi 'Usa la mia posizione' o cerca una città.");
+      }
     } else if (key) {
       alert("Chiave non valida. Assicurati che inizi con AIza e sia corretta.");
     }
@@ -440,8 +449,26 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
   return (
     <div 
       className="min-h-screen bg-[#0a0502] text-[#e0d8d0] font-serif selection:bg-[#ff4e00]/30"
-      style={{ backgroundColor: '#0a0502', color: '#e0d8d0' }}
+      style={{ 
+        backgroundColor: '#0a0502', 
+        color: '#e0d8d0', 
+        minHeight: '100vh',
+        width: '100%',
+        margin: 0,
+        padding: 0,
+        overflowX: 'hidden'
+      }}
     >
+      {/* CSS Layout Failsafe */}
+      <style>{`
+        body { background-color: #0a0502; margin: 0; padding: 0; color: #e0d8d0; }
+        * { box-sizing: border-box; }
+        .bg-white\\/5 { background-color: rgba(255, 255, 255, 0.05); }
+        .border-white\\/10 { border: 1px solid rgba(255, 255, 255, 0.1); }
+        .text-white { color: #ffffff; }
+        .bg-\\[\\#ff4e00\\] { background-color: #ff4e00; }
+      `}</style>
+
       {/* Atmospheric Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-[#3a1510] rounded-full blur-[120px] opacity-40" />
