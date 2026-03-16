@@ -32,7 +32,7 @@ import {
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
@@ -335,19 +335,17 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
       addLog(`ApiKey verificata (inizia con ${apiKey.substring(0,6)}...)`);
 
       addLog("Inizializzazione Gemini...");
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const ai = new GoogleGenAI({ apiKey });
 
       addLog("Invio richiesta a Gemini...");
-      const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: aiPrompt }] }]
+      const result = await ai.models.generateContent({
+        model: "gemini-2.0-flash",
+        contents: aiPrompt
       });
       addLog("Risposta ricevuta da Gemini.");
 
-      const response = result.response;
-      const text = response.text() || "";
-      const groundingMetadata = (response as any).candidates?.[0]?.groundingMetadata;
-      const chunks = groundingMetadata?.groundingChunks || [];
+      const text = result.text || "";
+      const chunks: any[] = [];
       
       const extractedPlaces: MysteryPlace[] = [];
       const cleanText = text.replace(/\*\*NOME\*\*:/ig, 'NOME:').replace(/\*\*DESCRIZIONE\*\*:/ig, 'DESCRIZIONE:');
