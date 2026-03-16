@@ -99,6 +99,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
+  const [activeApiKey, setActiveApiKey] = useState<string | null>(null);
   
   // Contribution Form State
   const [showContribute, setShowContribute] = useState(false);
@@ -106,9 +107,19 @@ function App() {
   const [newDescription, setNewDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Check API Key on mount
+  // Initialize API Key
   useEffect(() => {
-    // No longer needed on client
+    const envKey = import.meta.env.VITE_GEMINI_API_KEY;
+    const savedKey = window.localStorage.getItem('MISTERI_GEMINI_KEY');
+    
+    // Check if the key is valid (not empty and doesn't look like a placeholder)
+    const isValid = (k: any) => k && typeof k === 'string' && k.startsWith('AIza') && k.length > 20;
+
+    if (isValid(envKey)) {
+      setActiveApiKey(envKey);
+    } else if (isValid(savedKey)) {
+      setActiveApiKey(savedKey);
+    }
   }, []);
 
   // Global Error Handler for Debugging
@@ -230,18 +241,38 @@ function App() {
     }
   };
 
+  const saveManualKey = () => {
+    const key = window.prompt("Incolla qui la tua chiave API di Gemini (inizia con AIza):");
+    if (key && key.startsWith('AIza') && key.length > 20) {
+      window.localStorage.setItem('MISTERI_GEMINI_KEY', key);
+      setActiveApiKey(key);
+      setError(null);
+      alert("Chiave configurata con successo! Ora puoi cercare i misteri.");
+    } else if (key) {
+      alert("Chiave non valida. Assicurati che inizi con AIza e sia corretta.");
+    }
+  };
+
   const getPosition = () => {
     setLoading(true);
     setError(null);
-    setSearchCity(""); // Clear city search when using GPS
+    setSearchCity(""); 
+    
     if (!navigator.geolocation) {
       setError("La geolocalizzazione non è supportata dal tuo browser.");
       setLoading(false);
       return;
     }
 
+    const options = {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    };
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        console.log("Posizione ottenuta:", position.coords.latitude, position.coords.longitude);
         setLocation({
           lat: position.coords.latitude,
           lng: position.coords.longitude,
@@ -249,10 +280,23 @@ function App() {
         setLoading(false);
       },
       (err) => {
-        setError("Impossibile ottenere la tua posizione. Assicurati di aver concesso i permessi.");
+        let errorMsg = "Errore nella geolocalizzazione.";
+        switch(err.code) {
+          case 1:
+            errorMsg = "Permessi negati. Per favore, abilita la posizione nelle impostazioni del browser/telefono.";
+            break;
+          case 2:
+            errorMsg = "Posizione non disponibile (segnale GPS debole o assente). Prova ad avvicinarti a una finestra.";
+            break;
+          case 3:
+            errorMsg = "Richiesta scaduta (timeout). Riprova tra un istante.";
+            break;
+        }
+        setError(errorMsg);
         setLoading(false);
-        console.error(err);
-      }
+        console.error("Geolocation Error:", err);
+      },
+      options
     );
   };
 
@@ -279,25 +323,14 @@ DESCRIZIONE: [Narrazione dettagliata, prolissa e coinvolgente del mistero, inclu
 
 Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
 
-      // Standard Vite environment variable access
-      let apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      const apiKey = activeApiKey;
       
-      // Fallback for manual test if everything else fails
       if (!apiKey) {
-        apiKey = window.localStorage.getItem('TEMP_GEMINI_KEY') || "";
+        saveManualKey(); // Try to get it now
+        throw new Error("Chiave API non configurata. Usa il pulsante 'Configura Chiave API' o aggiungi VITE_GEMINI_API_KEY su Render.");
       }
 
-      if (!apiKey || apiKey.length < 10) {
-        const manualKey = window.prompt("CHIAVE API NON TROVATA!\n\nNon riesco a trovare la chiave 'VITE_GEMINI_API_KEY' nelle impostazioni di Render.\n\nVuoi incollarla qui a mano solo per TESTARE se ora funziona? (Verrà salvata solo in questo browser)");
-        if (manualKey && manualKey.startsWith('AIza')) {
-          window.localStorage.setItem('TEMP_GEMINI_KEY', manualKey);
-          apiKey = manualKey;
-        } else {
-          throw new Error("Chiave API mancante or invalida. Assicurati che su Render la variabile si chiami VITE_GEMINI_API_KEY.");
-        }
-      }
-
-      console.log("Inizializzazione Gemini con chiave:", apiKey.substring(0, 6) + "...");
+      console.log("Inizializzazione Gemini...");
       const genAI = new (GoogleGenAI as any)(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
@@ -622,6 +655,12 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
                     className="px-6 py-2 bg-red-500 text-white rounded-full font-bold hover:bg-red-600 transition-colors"
                   >
                     Riprova
+                  </button>
+                  <button 
+                    onClick={saveManualKey}
+                    className="px-6 py-2 bg-white/10 text-white rounded-full font-bold border border-white/20 hover:bg-white/20 transition-colors"
+                  >
+                    Configura Chiave API
                   </button>
                 </div>
               </div>
