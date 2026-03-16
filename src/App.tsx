@@ -73,6 +73,26 @@ export default function App() {
     // No longer needed on client
   }, []);
 
+  // Global Error Handler for Debugging
+  useEffect(() => {
+    const handleGlobalError = (event: ErrorEvent | PromiseRejectionEvent) => {
+      const message = 'reason' in event ? event.reason : event.message;
+      console.error("Caught Global Error:", message);
+      // Only alert if it's a critical React/JS error that would cause a white screen
+      if (message && !message.toString().includes('Quota exceeded')) {
+        alert("Errore Critico rilevato: " + message);
+      }
+    };
+    window.addEventListener('error', handleGlobalError);
+    window.addEventListener('unhandledrejection', handleGlobalError);
+    return () => {
+      window.removeEventListener('error', handleGlobalError);
+      window.removeEventListener('unhandledrejection', handleGlobalError);
+    };
+  }, []);
+
+  // Auth Listener
+
   // Auth Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -85,23 +105,27 @@ export default function App() {
   useEffect(() => {
     const q = query(collection(db, 'contributions'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const contributions = snapshot.docs
-        .map(doc => {
-          const data = doc.data();
-          return {
-            title: data.title,
-            description: data.description,
-            authorName: data.authorName,
-            createdAt: data.createdAt,
-            isUserContributed: true,
-            lat: data.lat,
-            lng: data.lng
-          };
-        })
-        // Remove locally pending items with null timestamps to prevent rendering crashes
-        .filter(c => c.createdAt !== null);
-      
-      setUserContributions(contributions);
+      try {
+        const contributions = snapshot.docs
+          .map(doc => {
+            const data = doc.data();
+            return {
+              title: data.title,
+              description: data.description,
+              authorName: data.authorName,
+              createdAt: data.createdAt,
+              isUserContributed: true,
+              lat: data.lat,
+              lng: data.lng
+            };
+          })
+          // Completely strip out locally-pending items that lack a valid resolved timestamp from the server, which otherwise causes React to crash
+          .filter(c => c.createdAt && typeof c.createdAt.toDate === 'function');
+        
+        setUserContributions(contributions);
+      } catch (err) {
+        console.error("Error processing contributions snapshot:", err);
+      }
     }, (err) => {
       console.error("Firestore Error:", err);
     });
@@ -582,9 +606,11 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
 
 
                 {/* AI Results */}
-                {places.map((place, idx) => (
+                {places.map((place, idx) => {
+                  if (!place || !place.title) return null;
+                  return (
                   <motion.div
-                    key={idx}
+                    key={`ai-${idx}`}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.1 }}
@@ -612,7 +638,7 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
                       )}
                     </div>
                   </motion.div>
-                ))}
+                )})}
 
                 {sources.length > 0 && (
                   <motion.div 
@@ -625,7 +651,9 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
                       Approfondimenti dal Web
                     </h4>
                     <div className="flex flex-wrap gap-3">
-                      {sources.map((source, idx) => (
+                      {sources.map((source, idx) => {
+                        if (!source || !source.uri) return null;
+                        return (
                         <a 
                           key={idx}
                           href={source.uri}
@@ -635,7 +663,7 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
                         >
                           {source.title || 'Fonte'}
                         </a>
-                      ))}
+                      )})}
                     </div>
                   </motion.div>
                 )}
