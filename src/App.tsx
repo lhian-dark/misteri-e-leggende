@@ -338,12 +338,9 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-      addLog("Invio richiesta a Gemini (con ricerca)...");
+      addLog("Invio richiesta a Gemini...");
       const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: aiPrompt }] }],
-        tools: [
-          { googleSearch: {} } as any
-        ]
+        contents: [{ role: 'user', parts: [{ text: aiPrompt }] }]
       });
       addLog("Risposta ricevuta da Gemini.");
 
@@ -453,6 +450,14 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
       findMysteryPlaces(null, null, radius, searchCity);
     }
   };
+
+  // Auto-trigger search when GPS position is obtained
+  useEffect(() => {
+    if (location && activeApiKey) {
+      findMysteryPlaces(location.lat, location.lng, radius);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location]); // Only re-run when location changes (not radius/key to avoid loops)
 
   return (
     <div 
