@@ -12,7 +12,7 @@ const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   app.use(express.json());
 
@@ -33,9 +33,14 @@ async function startServer() {
           typeof process.env[key] === 'string' && 
           process.env[key]?.startsWith('AIza')
         );
+        const mistakenKeyName = envKeys.find(key => key.startsWith('AIza'));
+
         if (potentialKeyName) {
           apiKey = process.env[potentialKeyName];
           console.log(`Using potential API key from: ${potentialKeyName}`);
+        } else if (mistakenKeyName) {
+          apiKey = mistakenKeyName;
+          console.log(`Using API key incorrectly set as env name: ${mistakenKeyName}`);
         }
       }
 
