@@ -1,0 +1,7 @@
+{
+  "name": "Misteri e Leggende",
+  "description": "Un'applicazione per scoprire luoghi avvolti nel mistero, leggende e fenomeni paranormali nelle tue vicinanze.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

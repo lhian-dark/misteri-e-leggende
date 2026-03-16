@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "Contribution": {
+      "title": "Contribution",
+      "description": "A user-contributed mystery place",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Name of the place"
+        },
+        "description": {
+          "type": "string",
+          "description": "Details about the mystery"
+        },
+        "lat": {
+          "type": "number",
+          "description": "Latitude"
+        },
+        "lng": {
+          "type": "number",
+          "description": "Longitude"
+        },
+        "authorId": {
+          "type": "string",
+          "description": "UID of the user who added it"
+        },
+        "authorName": {
+          "type": "string",
+          "description": "Name of the author"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When it was added"
+        }
+      },
+      "required": ["title", "description", "lat", "lng", "authorId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "contributions": {
+      "schema": "Contribution",
+      "description": "Collection of user-contributed mystery places"
+    }
+  }
+}
