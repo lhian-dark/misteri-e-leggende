@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Ghost, 
   MapPin, 
@@ -32,7 +32,7 @@ import {
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
@@ -107,11 +107,13 @@ function App() {
   const [newDescription, setNewDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const findMysteryPlacesRef = useRef<any>(null);
+  const saveManualKeyRef = useRef<any>(null);
 
-  const addLog = (msg: string) => {
+  const addLog = useCallback((msg: string) => {
     console.log(`[DEBUG] ${msg}`);
-    setDebugLogs(prev => [...prev.slice(-10), `${new Date().toLocaleTimeString()}: ${msg}`]);
-  };
+    setDebugLogs(prev => [...prev.slice(-12), `${new Date().toLocaleTimeString()}: ${msg}`]);
+  }, []);
 
   // Initialize API Key
   useEffect(() => {
@@ -248,29 +250,8 @@ function App() {
     }
   };
 
-  const saveManualKey = () => {
-    const key = window.prompt("Incolla qui la tua chiave API di Gemini (inizia con AIza):");
-    if (key && key.startsWith('AIza') && key.length > 20) {
-      window.localStorage.setItem('MISTERI_GEMINI_KEY', key);
-      setActiveApiKey(key);
-      setError(null);
-      
-      // Automatic trigger: if we already have a location or city, try searching immediately
-      if (location || searchCity) {
-        setTimeout(() => {
-          if (location) findMysteryPlaces(location.lat, location.lng, radius);
-          else if (searchCity) findMysteryPlaces(null, null, radius, searchCity);
-        }, 100);
-      } else {
-        alert("Chiave configurata! Ora premi 'Usa la mia posizione' o cerca una città.");
-      }
-    } else if (key) {
-      alert("Chiave non valida. Assicurati che inizi con AIza e sia corretta.");
-    }
-  };
-
   const getPosition = () => {
-    addLog("Avvio geolocalizzazione...");
+    addLog("Richiesta posizione GPS...");
     setLoading(true);
     setError(null);
     setSearchCity(""); 
@@ -347,14 +328,14 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
       
       if (!apiKey) {
         addLog("Errore: Chiave API non trovata durante la ricerca.");
-        saveManualKey(); 
+        if (saveManualKeyRef.current) saveManualKeyRef.current(); 
         throw new Error("Chiave API non configurata.");
       }
 
       addLog(`ApiKey verificata (inizia con ${apiKey.substring(0,6)}...)`);
 
       addLog("Inizializzazione Gemini...");
-      const genAI = new (GoogleGenAI as any)(apiKey);
+      const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
       addLog("Invio richiesta a Gemini (con ricerca)...");
@@ -371,10 +352,7 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
       const groundingMetadata = (response as any).candidates?.[0]?.groundingMetadata;
       const chunks = groundingMetadata?.groundingChunks || [];
       
-      // Improved parsing logic for the new format
       const extractedPlaces: MysteryPlace[] = [];
-      
-      // Clean up common AI markdown mistakes
       const cleanText = text.replace(/\*\*NOME\*\*:/ig, 'NOME:').replace(/\*\*DESCRIZIONE\*\*:/ig, 'DESCRIZIONE:');
       const blocks = cleanText.split(/NOME:/i).filter((b: string) => b.trim().length > 0);
       
@@ -388,7 +366,6 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
         }
       });
       
-      // Fallback parsing if AI completely ignored format and returned bullet points
       if (extractedPlaces.length === 0) {
         const lines = cleanText.split('\n');
         lines.forEach((line: string) => {
@@ -405,23 +382,18 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
         });
       }
       
-      // Collect all links (Maps and Web)
       const allLinks = chunks.map((chunk: any) => {
         if (chunk.maps?.uri) return { uri: chunk.maps.uri, title: chunk.maps.title, type: 'map' };
         if (chunk.web?.uri) return { uri: chunk.web.uri, title: chunk.web.title, type: 'web' };
         return null;
       }).filter(Boolean) as { uri: string; title?: string; type: string }[];
 
-      // Merge URLs into places
       const finalPlaces = extractedPlaces.map((p) => {
         const matchingLink = allLinks.find(link => 
           (link.title && (link.title.toLowerCase().includes(p.title.toLowerCase()) || 
           p.title.toLowerCase().includes(link.title.toLowerCase())))
         );
-        return {
-          ...p,
-          url: matchingLink?.uri
-        };
+        return { ...p, url: matchingLink?.uri };
       });
 
       setSources(allLinks.filter(l => l.type === 'web').map(l => ({ uri: l.uri, title: l.title })));
@@ -432,7 +404,6 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
     } catch (err: any) {
       console.error("Search Error:", err);
       let msg = "Errore durante la ricerca dei misteri.";
-      
       if (err.message?.includes("API key not found") || err.message?.includes("API_KEY_INVALID") || err.message?.includes("400")) {
         msg = "Problema di configurazione del server. Riprova tra poco.";
       } else if (err.message?.includes("Quota exceeded") || err.message?.includes("429")) {
@@ -446,13 +417,34 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
     } finally {
       setSearching(false);
     }
-  }, [activeApiKey, location, radius, searchCity, saveManualKey]);
+  }, [activeApiKey, addLog]); 
 
-  useEffect(() => {
-    if (location && !searchCity) {
-      findMysteryPlaces(location.lat, location.lng, radius);
+  findMysteryPlacesRef.current = findMysteryPlaces;
+
+  const saveManualKey = useCallback(() => {
+    const key = window.prompt("Incolla qui la tua chiave API di Gemini (inizia con AIza):");
+    if (key && key.startsWith('AIza') && key.length > 20) {
+      window.localStorage.setItem('MISTERI_GEMINI_KEY', key);
+      setActiveApiKey(key);
+      setError(null);
+      
+      if (location || searchCity) {
+        addLog("Chiave inserita. Riprovo la ricerca...");
+        setTimeout(() => {
+          if (findMysteryPlacesRef.current) {
+            if (location) findMysteryPlacesRef.current(location.lat, location.lng, radius);
+            else if (searchCity) findMysteryPlacesRef.current(null, null, radius, searchCity);
+          }
+        }, 100);
+      } else {
+        alert("Chiave configurata! Ora premi 'Usa la mia posizione' o cerca una città.");
+      }
+    } else if (key) {
+      alert("Chiave non valida. Assicurati che inizi con AIza e sia corretta.");
     }
-  }, [location, findMysteryPlaces, radius, searchCity]);
+  }, [location, searchCity, radius, addLog]);
+
+  saveManualKeyRef.current = saveManualKey;
 
   const handleCitySearch = (e: any) => {
     e.preventDefault();
