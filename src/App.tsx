@@ -118,7 +118,7 @@ export default function App() {
 
   const handleContribute = async (e: any) => {
     e.preventDefault();
-    if (!user || !location) return;
+    if (!location) return;
     
     setIsSubmitting(true);
     try {
@@ -127,8 +127,8 @@ export default function App() {
         description: newDescription,
         lat: location.lat,
         lng: location.lng,
-        authorId: user.uid,
-        authorName: user.displayName || "Utente Anonimo",
+        authorId: user?.uid || "anon_" + Math.random().toString(36).substring(2, 9),
+        authorName: user?.displayName || "Utente Anonimo",
         createdAt: serverTimestamp()
       });
       setNewTitle("");
@@ -136,7 +136,7 @@ export default function App() {
       setShowContribute(false);
     } catch (err) {
       console.error("Contribution Error:", err);
-      setError("Errore durante il salvataggio del luogo.");
+      setError("Errore durante il salvataggio del luogo. Permesso negato nel database.");
     } finally {
       setIsSubmitting(false);
     }
@@ -290,7 +290,7 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
         {/* Header */}
         <header className="text-center mb-16 flex flex-col items-center justify-center">
           <div className="w-full flex justify-end mb-8">
-            {user ? (
+            {user && (
               <div className="flex items-center gap-4 bg-white/5 p-2 pr-4 rounded-full border border-white/10">
                 {user.photoURL && <img src={user.photoURL} alt={user.displayName || ""} className="w-8 h-8 rounded-full border border-[#ff4e00]/30" referrerPolicy="no-referrer" />}
                 <span className="text-sm font-medium">{user.displayName}</span>
@@ -298,14 +298,6 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
                   <LogOut className="w-4 h-4" />
                 </button>
               </div>
-            ) : (
-              <button 
-                onClick={login}
-                className="flex items-center gap-2 px-6 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-sm font-medium transition-all"
-              >
-                <User className="w-4 h-4" />
-                Accedi per contribuire
-              </button>
             )}
           </div>
 
@@ -427,7 +419,7 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
                   </div>
                 </div>
 
-                {location && user && (
+                {location && (
                   <motion.div 
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
