@@ -15,7 +15,6 @@ import {
   Send,
   X
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 import { auth, db } from './firebase';
 import { 
   signInWithPopup, 
@@ -89,6 +88,7 @@ interface MysteryPlace {
 }
 
 function App() {
+  console.log("Misteri & Leggende: App Start");
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [places, setPlaces] = useState<MysteryPlace[]>([]);
@@ -427,54 +427,44 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
             )}
           </div>
 
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+          <h1
             className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 text-white"
           >
             Misteri & Leggende <span className="text-[#ff4e00] block md:inline md:ml-2 text-2xl md:text-4xl opacity-80">by l'ORA BUIA</span>
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
+          </h1>
+          <p
             className="text-lg text-[#e0d8d0]/60 italic"
           >
             Esplora l'ignoto che ti circonda...
-          </motion.p>
+          </p>
         </header>
 
         {/* Action Section */}
         <section className="mb-12">
           <div className="grid gap-6">
             {/* Manual Search Input */}
-            <motion.form 
+            <form
               onSubmit={handleCitySearch}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
               className="relative group"
             >
-              <input 
+              <input
                 type="text"
                 placeholder="Inserisci una città o un paese..."
                 value={searchCity}
                 onChange={(e) => setSearchCity(e.target.value)}
                 className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-[#ff4e00]/50 transition-all text-lg placeholder:text-[#e0d8d0]/30"
               />
-              <button 
+              <button
                 type="submit"
                 disabled={searching || !searchCity.trim()}
                 className="absolute right-2 top-2 bottom-2 px-6 bg-[#ff4e00] text-white rounded-xl font-bold hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100"
               >
                 <Search className="w-5 h-5" />
               </button>
-            </motion.form>
+            </form>
 
             {!location && !searching && !places.length ? (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
+              <div
                 className="flex flex-col items-center justify-center p-12 rounded-[32px] bg-white/5 backdrop-blur-xl border border-white/10 text-center"
               >
                 <Compass className="w-16 h-16 mb-6 text-[#ff4e00] animate-spin-slow" />
@@ -482,16 +472,16 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
                 <p className="mb-6 text-[#e0d8d0]/70 max-w-md">
                   Puoi inserire una città qui sopra o usare la tua posizione per individuare i luoghi misteriosi.
                 </p>
-                
+
                 <div className="w-full max-w-xs mb-8">
                   <div className="flex justify-between mb-2">
                     <span className="text-sm text-[#e0d8d0]/60">Raggio di ricerca</span>
                     <span className="text-sm font-bold text-[#ff4e00]">{radius} km</span>
                   </div>
-                  <input 
-                    type="range" 
-                    min="10" 
-                    max="200" 
+                  <input
+                    type="range"
+                    min="10"
+                    max="200"
                     step="10"
                     value={radius}
                     onChange={(e) => setRadius(parseInt(e.target.value))}
@@ -508,7 +498,7 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Navigation className="w-5 h-5" />}
                   <span className="relative">Usa la mia posizione</span>
                 </button>
-              </motion.div>
+              </div>
             ) : (
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-white/5 border border-white/10">
@@ -527,16 +517,16 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
                     <span className="text-sm opacity-70">• {radius} km</span>
                   </div>
                   <div className="flex items-center gap-4">
-                    <input 
-                      type="range" 
-                      min="10" 
-                      max="200" 
+                    <input
+                      type="range"
+                      min="10"
+                      max="200"
                       step="10"
                       value={radius}
                       onChange={(e) => setRadius(parseInt(e.target.value))}
                       className="w-24 md:w-32 h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#ff4e00]"
                     />
-                    <button 
+                    <button
                       onClick={location ? getPosition : () => findMysteryPlaces(null, null, radius, searchCity)}
                       className="text-xs uppercase tracking-widest font-bold text-[#ff4e00] hover:underline"
                     >
@@ -546,13 +536,11 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
                 </div>
 
                 {location && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
+                  <div
                     className="flex justify-center"
                   >
                     {!showContribute ? (
-                      <button 
+                      <button
                         onClick={() => setShowContribute(true)}
                         className="flex items-center gap-2 px-6 py-3 bg-[#ff4e00]/10 hover:bg-[#ff4e00]/20 border border-[#ff4e00]/30 rounded-full text-[#ff4e00] font-bold transition-all"
                       >
@@ -570,9 +558,9 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
                         <form onSubmit={handleContribute} className="space-y-4">
                           <div>
                             <label className="block text-xs uppercase tracking-widest text-[#e0d8d0]/40 mb-2">Nome del Luogo</label>
-                            <input 
+                            <input
                               required
-                              type="text" 
+                              type="text"
                               value={newTitle}
                               onChange={(e) => setNewTitle(e.target.value)}
                               placeholder="Esempio: La Villa del Pianto"
@@ -581,7 +569,7 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
                           </div>
                           <div>
                             <label className="block text-xs uppercase tracking-widest text-[#e0d8d0]/40 mb-2">Il Mistero</label>
-                            <textarea 
+                            <textarea
                               required
                               rows={4}
                               value={newDescription}
@@ -590,7 +578,7 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
                               className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:border-[#ff4e00]/50 outline-none transition-all resize-none"
                             />
                           </div>
-                          <button 
+                          <button
                             type="submit"
                             disabled={isSubmitting}
                             className="w-full flex items-center justify-center gap-2 py-4 bg-[#ff4e00] text-white rounded-xl font-bold hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
@@ -601,7 +589,7 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
                         </form>
                       </div>
                     )}
-                  </motion.div>
+                  </div>
                 )}
               </div>
             )}
@@ -610,24 +598,19 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
 
         {/* Results Section */}
         <section>
-          <AnimatePresence mode="wait">
+          <React.Fragment>
             {searching ? (
-              <motion.div 
+              <div
                 key="loading"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
                 className="flex flex-col items-center justify-center py-20"
               >
                 <Ghost className="w-12 h-12 text-[#ff4e00] animate-bounce mb-4" />
                 <p className="text-xl italic animate-pulse">Scansione profonda in corso...</p>
                 <p className="text-sm text-[#e0d8d0]/40 mt-2">Interrogando archivi storici e leggende locali...</p>
-              </motion.div>
+              </div>
             ) : error ? (
-              <motion.div 
+              <div 
                 key="error"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
                 className="p-8 rounded-[32px] bg-red-500/10 border border-red-500/20 text-center"
               >
                 <Info className="w-12 h-12 mx-auto mb-4 text-red-500" />
@@ -641,12 +624,10 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
                     Riprova
                   </button>
                 </div>
-              </motion.div>
+              </div>
             ) : (places.length > 0 || userContributions.length > 0) ? (
-              <motion.div 
+              <div 
                 key="results"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
                 className="grid gap-8"
               >
                 {/* User Contributions First */}
@@ -721,9 +702,7 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
                 })}
 
                 {sources.length > 0 && (
-                  <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                  <div 
                     className="mt-12 p-8 rounded-[32px] bg-[#ff4e00]/5 border border-[#ff4e00]/20"
                   >
                     <h4 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
@@ -745,11 +724,11 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
                         </a>
                       )})}
                     </div>
-                  </motion.div>
+                  </div>
                 )}
-              </motion.div>
+              </div>
             ) : null}
-          </AnimatePresence>
+          </React.Fragment>
         </section>
 
         {/* Footer Info */}
