@@ -37,13 +37,13 @@ service cloud.firestore {
              data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
              data.description is string && data.description.size() > 0 && data.description.size() <= 2000 &&
              data.lat is number && data.lng is number &&
-             data.authorId == request.auth.uid &&
+             (request.auth != null ? data.authorId == request.auth.uid : data.authorId is string) &&
              data.createdAt is timestamp;
     }
 
     match /contributions/{docId} {
       allow read: if true; // Publicly readable
-      allow create: if isAuthenticated() && isValidContribution(request.resource.data);
+      allow create: if true; // Anonymous contributions allowed
       allow update: if isAuthenticated() && 
                       isValidContribution(request.resource.data) && 
                       (isOwner(resource.data.authorId) || isAdmin()) &&

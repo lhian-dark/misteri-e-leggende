@@ -1,9 +1,4 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Ghost, 
   MapPin, 
@@ -38,9 +33,52 @@ import {
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
+import { GoogleGenAI } from "@google/genai";
+
+// Error Boundary Component
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
+  public state: {hasError: boolean, error: any};
+  public props: {children: React.ReactNode};
+  constructor(props: {children: React.ReactNode}) {
+    super(props);
+    this.state = { hasError: false, error: null };
+    this.props = props;
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+
+  render() {
+    const state = this.state as { hasError: boolean, error: any };
+    if (state.hasError) {
+      return (
+        <div style={{ padding: '20px', color: 'white', background: '#300', minHeight: '100vh', fontFamily: 'sans-serif' }}>
+          <h2>Ops! Qualcosa è andato storto nell'interfaccia.</h2>
+          <p>L'app ha riscontrato un errore di visualizzazione.</p>
+          <pre style={{ background: '#000', padding: '10px', overflow: 'auto' }}>
+            {state.error?.toString()}
+          </pre>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{ padding: '10px 20px', background: '#ff4e00', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
+          >
+            Ricarica Pagina
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // Types
 interface MysteryPlace {
+  id?: string;
   title: string;
   description: string;
   location?: string;
@@ -50,7 +88,7 @@ interface MysteryPlace {
   createdAt?: any;
 }
 
-export default function App() {
+function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [places, setPlaces] = useState<MysteryPlace[]>([]);
@@ -158,11 +196,16 @@ export default function App() {
 
   const handleContribute = async (e: any) => {
     e.preventDefault();
-    if (!location) return;
+    console.log("handleContribute: Starting submission...");
+    if (!location) {
+      console.warn("handleContribute: No location available");
+      return;
+    }
     
     setIsSubmitting(true);
     try {
-      await addDoc(collection(db, 'contributions'), {
+      console.log("handleContribute: Sending to Firestore...");
+      const docData = {
         title: newTitle,
         description: newDescription,
         lat: location.lat,
@@ -170,7 +213,11 @@ export default function App() {
         authorId: user?.uid || "anon_" + Math.random().toString(36).substring(2, 9),
         authorName: user?.displayName || "Utente Anonimo",
         createdAt: serverTimestamp()
-      });
+      };
+      
+      const res = await addDoc(collection(db, 'contributions'), docData);
+      console.log("handleContribute: Success, docId:", res.id);
+      
       setNewTitle("");
       setNewDescription("");
       setShowContribute(false);
@@ -179,6 +226,7 @@ export default function App() {
       setError("Errore durante il salvataggio del luogo. Permesso negato nel database.");
     } finally {
       setIsSubmitting(false);
+      console.log("handleContribute: Finished.");
     }
   };
 
@@ -231,23 +279,25 @@ DESCRIZIONE: [Narrazione dettagliata, prolissa e coinvolgente del mistero, inclu
 
 Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
 
-      const apiResponse = await fetch('/api/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, lat, lng })
-      });
-
-      if (!apiResponse.ok) {
-        const errorData = await apiResponse.json();
-        const errorMessage = errorData.details 
-          ? `${errorData.error} ${errorData.details} ${errorData.suggestion || ''}`
-          : (errorData.error || "Errore durante la ricerca sul server.");
-        throw new Error(errorMessage);
+      const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error("Chiave API (VITE_GEMINI_API_KEY) non configurata sul client.");
       }
 
-      const data = await apiResponse.json();
-      const text = data.text || "";
-      const chunks = data.groundingMetadata?.groundingChunks || [];
+      const genAI = new GoogleGenAI(apiKey) as any;
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        tools: [
+          { googleSearch: {} } as any
+        ]
+      });
+
+      const response = result.response;
+      const text = response.text() || "";
+      const groundingMetadata = (response as any).candidates?.[0]?.groundingMetadata;
+      const chunks = groundingMetadata?.groundingChunks || [];
       
       // Improved parsing logic for the new format
       const extractedPlaces: MysteryPlace[] = [];
@@ -587,70 +637,74 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
               >
                 {/* User Contributions First */}
                 {userContributions.map((place, idx) => {
-                  if (!place || !place.title) return null; // Safe fallback
-                  return (
-                  <motion.div
-                    key={place.id || `user-${idx}`}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="group relative p-8 rounded-[32px] bg-[#ff4e00]/5 backdrop-blur-md border border-[#ff4e00]/20 hover:bg-[#ff4e00]/10 transition-all duration-500"
-                  >
-                    <div className="absolute top-4 right-8 flex items-center gap-2 text-[10px] uppercase tracking-widest text-[#ff4e00] font-bold">
-                      <Skull className="w-3 h-3" />
-                      Segnalazione Utente
-                    </div>
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                      <div className="flex-1">
-                        <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-[#ff4e00] transition-colors">
-                          {place.title || "Mistero Senza Nome"}
-                        </h3>
-                        <p className="text-[#e0d8d0]/80 leading-relaxed mb-4">
-                          {place.description || ""}
-                        </p>
-                        <div className="flex items-center gap-2 text-xs text-[#e0d8d0]/40">
-                          <User className="w-3 h-3" />
-                          <span>Segnalato da {place.authorName || "Utente Anonimo"}</span>
+                  try {
+                    if (!place || !place.title) return null;
+                    return (
+                      <div
+                        key={place.id || `user-${idx}`}
+                        className="group relative p-8 rounded-[32px] bg-[#ff4e00]/5 backdrop-blur-md border border-[#ff4e00]/20 hover:bg-[#ff4e00]/10 transition-all duration-500"
+                      >
+                        <div className="absolute top-4 right-8 flex items-center gap-2 text-[10px] uppercase tracking-widest text-[#ff4e00] font-bold">
+                          <Skull className="w-3 h-3" />
+                          Segnalazione Utente
+                        </div>
+                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                          <div className="flex-1">
+                            <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-[#ff4e00] transition-colors">
+                              {place.title || "Mistero Senza Nome"}
+                            </h3>
+                            <p className="text-[#e0d8d0]/80 leading-relaxed mb-4">
+                              {place.description || ""}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-[#e0d8d0]/40">
+                              <User className="w-3 h-3" />
+                              <span>Segnalato da {String(place.authorName || "Utente Anonimo")}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </motion.div>
-                )})}
-
+                    );
+                  } catch (e) {
+                    return null;
+                  }
+                })}
 
                 {/* AI Results */}
                 {places.map((place, idx) => {
-                  if (!place || !place.title) return null;
-                  return (
-                  <motion.div
-                    key={`ai-${idx}`}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.1 }}
-                    className="group relative p-8 rounded-[32px] bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-all duration-500"
-                  >
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                      <div className="flex-1">
-                        <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-[#ff4e00] transition-colors">
-                          {place.title}
-                        </h3>
-                        <p className="text-[#e0d8d0]/80 leading-relaxed mb-4">
-                          {place.description}
-                        </p>
+                  try {
+                    if (!place || !place.title) return null;
+                    return (
+                      <div
+                        key={`ai-${idx}`}
+                        className="group relative p-8 rounded-[32px] bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-all duration-500"
+                      >
+                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                          <div className="flex-1">
+                            <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-[#ff4e00] transition-colors">
+                              {String(place.title)}
+                            </h3>
+                            <p className="text-[#e0d8d0]/80 leading-relaxed mb-4">
+                              {String(place.description)}
+                            </p>
+                          </div>
+                          {place.url && (
+                            <a 
+                              href={place.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-[#ff4e00] text-sm transition-all self-start"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              Mappa
+                            </a>
+                          )}
+                        </div>
                       </div>
-                      {place.url && (
-                        <a 
-                          href={place.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-[#ff4e00] text-sm transition-all self-start"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                          Mappa
-                        </a>
-                      )}
-                    </div>
-                  </motion.div>
-                )})}
+                    );
+                  } catch (e) {
+                    return null;
+                  }
+                })}
 
                 {sources.length > 0 && (
                   <motion.div 
@@ -700,5 +754,13 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
         }
       `}</style>
     </div>
+  );
+}
+
+export default function AppWithErrorBoundary() {
+  return (
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   );
 }
