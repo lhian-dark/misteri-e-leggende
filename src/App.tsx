@@ -467,15 +467,6 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
         overflowX: 'hidden'
       }}
     >
-      {/* CSS Layout Failsafe */}
-      <style>{`
-        body { background-color: #0a0502; margin: 0; padding: 0; color: #e0d8d0; }
-        * { box-sizing: border-box; }
-        .bg-white\\/5 { background-color: rgba(255, 255, 255, 0.05); }
-        .border-white\\/10 { border: 1px solid rgba(255, 255, 255, 0.1); }
-        .text-white { color: #ffffff; }
-        .bg-\\[\\#ff4e00\\] { background-color: #ff4e00; }
-      `}</style>
 
       {/* Atmospheric Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
@@ -839,15 +830,6 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
         </div>
       </main>
 
-      <style>{`
-        @keyframes spin-slow {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .animate-spin-slow {
-          animation: spin-slow 12s linear infinite;
-        }
-      `}</style>
     </div>
   );
 }

@@ -1,1 +1,24 @@
 @import "tailwindcss";
+
+/* Base layout */
+body {
+  background-color: #0a0502;
+  color: #e0d8d0;
+  margin: 0;
+  padding: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Spin animation for the compass */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 12s linear infinite;
+}
