@@ -279,9 +279,11 @@ DESCRIZIONE: [Narrazione dettagliata, prolissa e coinvolgente del mistero, inclu
 
 Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
 
-      const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY;
+      const metaEnv = (import.meta as any).env || {};
+      const apiKey = metaEnv.VITE_GEMINI_API_KEY || metaEnv.GEMINI_API_KEY || metaEnv.VITE_API_KEY;
+      
       if (!apiKey) {
-        throw new Error("Chiave API (VITE_GEMINI_API_KEY) non configurata sul client.");
+        throw new Error("Chiave API non trovata. Assicurati di aver aggiunto VITE_GEMINI_API_KEY nelle impostazioni 'Environment' di Render e di aver rifatto il Deploy.");
       }
 
       const genAI = new GoogleGenAI(apiKey) as any;
