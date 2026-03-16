@@ -85,18 +85,22 @@ export default function App() {
   useEffect(() => {
     const q = query(collection(db, 'contributions'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const contributions = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          title: data.title,
-          description: data.description,
-          authorName: data.authorName,
-          createdAt: data.createdAt,
-          isUserContributed: true,
-          lat: data.lat,
-          lng: data.lng
-        };
-      });
+      const contributions = snapshot.docs
+        .map(doc => {
+          const data = doc.data();
+          return {
+            title: data.title,
+            description: data.description,
+            authorName: data.authorName,
+            createdAt: data.createdAt,
+            isUserContributed: true,
+            lat: data.lat,
+            lng: data.lng
+          };
+        })
+        // Remove locally pending items with null timestamps to prevent rendering crashes
+        .filter(c => c.createdAt !== null);
+      
       setUserContributions(contributions);
     }, (err) => {
       console.error("Firestore Error:", err);
@@ -211,17 +215,37 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
       
       // Improved parsing logic for the new format
       const extractedPlaces: MysteryPlace[] = [];
-      const blocks = text.split(/NOME:/i).filter((b: string) => b.trim().length > 0);
+      
+      // Clean up common AI markdown mistakes
+      const cleanText = text.replace(/\*\*NOME\*\*:/ig, 'NOME:').replace(/\*\*DESCRIZIONE\*\*:/ig, 'DESCRIZIONE:');
+      const blocks = cleanText.split(/NOME:/i).filter((b: string) => b.trim().length > 0);
       
       blocks.forEach((block: string) => {
         const parts = block.split(/DESCRIZIONE:/i);
         if (parts.length >= 2) {
           extractedPlaces.push({
-            title: parts[0].trim().replace(/^[#*>\d.\s]+/, ''),
+            title: parts[0].trim().replace(/^[#*>\d.\-\s]+/, ''),
             description: parts[1].trim()
           });
         }
       });
+      
+      // Fallback parsing if AI completely ignored format and returned bullet points
+      if (extractedPlaces.length === 0) {
+        const lines = cleanText.split('\n');
+        lines.forEach((line: string) => {
+          const content = line.trim();
+          if (content.match(/^[\*\-]\s+/) && content.length > 20) {
+            const rawItem = content.replace(/^[\*\-]\s+/, '');
+            const titleMatch = rawItem.match(/^(?:(?:[A-Z][a-z]+ )+[^è\-:.]*|.*?(?:è| - |:|\.))/);
+            const title = titleMatch ? titleMatch[0].replace(/(è| - |:|\.)$/, '').replace(/[\*\"]/g, '').trim() : "Mistero Rilevato";
+            extractedPlaces.push({
+              title: title.length > 50 ? title.substring(0, 50) + '...' : title,
+              description: rawItem
+            });
+          }
+        });
+      }
       
       // Collect all links (Maps and Web)
       const allLinks = chunks.map((chunk: any) => {
