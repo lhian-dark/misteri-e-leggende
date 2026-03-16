@@ -76,12 +76,23 @@ export default function App() {
   // Global Error Handler for Debugging
   useEffect(() => {
     const handleGlobalError = (event: ErrorEvent | PromiseRejectionEvent) => {
-      const message = 'reason' in event ? event.reason : event.message;
-      console.error("Caught Global Error:", message);
-      // Only alert if it's a critical React/JS error that would cause a white screen
-      if (message && !message.toString().includes('Quota exceeded')) {
-        alert("Errore Critico rilevato: " + message);
+      let message = "";
+      let stack = "";
+      
+      if ('reason' in event) {
+        message = event.reason?.message || event.reason?.toString() || "Unknown Promise Rejection";
+        stack = event.reason?.stack || "";
+      } else {
+        message = event.message || "Unknown Error";
+        stack = event.error?.stack || "";
       }
+
+      console.error("Caught Global Error:", message, stack);
+      
+      // Ignore non-critical quota errors
+      if (message.includes('Quota exceeded') || message.includes('429')) return;
+
+      alert(`ERRORE CRITICO:\n${message}\n\nStack:\n${stack.substring(0, 200)}...`);
     };
     window.addEventListener('error', handleGlobalError);
     window.addEventListener('unhandledrejection', handleGlobalError);
@@ -110,6 +121,7 @@ export default function App() {
           .map(doc => {
             const data = doc.data();
             return {
+              id: doc.id,
               title: data.title,
               description: data.description,
               authorName: data.authorName,
@@ -117,7 +129,7 @@ export default function App() {
               isUserContributed: true,
               lat: data.lat,
               lng: data.lng
-            };
+            } as any;
           })
           // Completely strip out locally-pending items that lack a valid resolved timestamp from the server, which otherwise causes React to crash
           .filter(c => c.createdAt && typeof c.createdAt.toDate === 'function');
@@ -578,7 +590,7 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
                   if (!place || !place.title) return null; // Safe fallback
                   return (
                   <motion.div
-                    key={`user-${idx}`}
+                    key={place.id || `user-${idx}`}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="group relative p-8 rounded-[32px] bg-[#ff4e00]/5 backdrop-blur-md border border-[#ff4e00]/20 hover:bg-[#ff4e00]/10 transition-all duration-500"
