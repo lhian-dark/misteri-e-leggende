@@ -421,7 +421,7 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
     } finally {
       setSearching(false);
     }
-  }, []);
+  }, [activeApiKey, location, radius, searchCity, saveManualKey]);
 
   useEffect(() => {
     if (location && !searchCity) {
@@ -438,16 +438,38 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0502] text-[#e0d8d0] font-serif selection:bg-[#ff4e00]/30">
+    <div 
+      className="min-h-screen bg-[#0a0502] text-[#e0d8d0] font-serif selection:bg-[#ff4e00]/30"
+      style={{ backgroundColor: '#0a0502', color: '#e0d8d0' }}
+    >
       {/* Atmospheric Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-[#3a1510] rounded-full blur-[120px] opacity-40 animate-pulse" />
+        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-[#3a1510] rounded-full blur-[120px] opacity-40" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#ff4e00] rounded-full blur-[150px] opacity-20" />
       </div>
 
       <main className="relative z-10 max-w-4xl mx-auto px-6 py-12">
-        {/* Header */}
-        <header className="text-center mb-16 flex flex-col items-center justify-center">
+        {!activeApiKey ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-white/5 rounded-[32px] border border-white/10 p-12 text-center">
+            <Skull className="w-16 h-16 text-[#ff4e00] mb-6" />
+            <h2 className="text-3xl font-bold text-white mb-4">Benvenuto nei Misteri</h2>
+            <p className="text-[#e0d8d0]/60 mb-8 max-w-md">
+              Per iniziare la ricerca dei luoghi paranormali, è necessario configurare la tua chiave API di Gemini.
+            </p>
+            <button 
+              onClick={saveManualKey}
+              className="px-10 py-4 bg-[#ff4e00] text-white rounded-full font-bold text-lg hover:scale-105 transition-all shadow-lg shadow-[#ff4e00]/20"
+            >
+              Configura Chiave API
+            </button>
+            <p className="mt-6 text-xs text-[#e0d8d0]/30 italic">
+              La chiave inizierà con 'AIza...' e verrà salvata solo nel tuo browser.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Header */}
+            <header className="text-center mb-16 flex flex-col items-center justify-center">
           <div className="w-full flex justify-end mb-8">
             {user && (
               <div className="flex items-center gap-4 bg-white/5 p-2 pr-4 rounded-full border border-white/10">
@@ -634,8 +656,7 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
           <React.Fragment>
             {searching ? (
               <div
-                key="loading"
-                className="flex flex-col items-center justify-center py-20"
+                                className="flex flex-col items-center justify-center py-20"
               >
                 <Ghost className="w-12 h-12 text-[#ff4e00] animate-bounce mb-4" />
                 <p className="text-xl italic animate-pulse">Scansione profonda in corso...</p>
@@ -643,8 +664,7 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
               </div>
             ) : error ? (
               <div 
-                key="error"
-                className="p-8 rounded-[32px] bg-red-500/10 border border-red-500/20 text-center"
+                                className="p-8 rounded-[32px] bg-red-500/10 border border-red-500/20 text-center"
               >
                 <Info className="w-12 h-12 mx-auto mb-4 text-red-500" />
                 <h3 className="text-xl font-bold text-white mb-2">Si è verificato un errore</h3>
@@ -666,8 +686,7 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
               </div>
             ) : (places.length > 0 || userContributions.length > 0) ? (
               <div 
-                key="results"
-                className="grid gap-8"
+                                className="grid gap-8"
               >
                 {/* User Contributions First */}
                 {userContributions.map((place, idx) => {
@@ -774,6 +793,8 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
         <footer className="mt-20 pt-8 border-t border-white/10 text-center text-sm text-[#e0d8d0]/40">
           <p>© {new Date().getFullYear()} Misteri & Leggende • Dati forniti da Google Maps</p>
         </footer>
+          </>
+        )}
       </main>
 
       <style>{`
