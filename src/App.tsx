@@ -277,12 +277,14 @@ Sii estremamente specifico. Se un luogo ha più leggende, citale tutte.`;
       
       if (err.message?.includes("API key not found") || err.message?.includes("API_KEY_INVALID") || err.message?.includes("400")) {
         msg = "Problema di configurazione del server. Riprova tra poco.";
-      } else if (err.message?.includes("Quota exceeded")) {
-        msg = "Limite di ricerche raggiunto per oggi. Riprova domani.";
+      } else if (err.message?.includes("Quota exceeded") || err.message?.includes("429")) {
+        msg = "Limite di ricerche gratuite raggiunto per oggi con Gemini. Riprova più tardi.";
       } else if (err.message) {
         msg += ` Dettagli: ${err.message}`;
       }
       setError(msg);
+      setPlaces([]);
+      setSources([]);
     } finally {
       setSearching(false);
     }
